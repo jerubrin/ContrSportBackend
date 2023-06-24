@@ -3,10 +3,11 @@ import {
   Controller,
   Get,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from 'src/auth/auth.service';
 import { JwtAuthGuard } from 'src/guard/jwt-auth.guard';
 import { LoginRequest } from './model/login-request';
@@ -41,9 +42,21 @@ export class AuthController {
     return this.authService.getUser(req);
   }
 
-  // @UseGuards(JwtAuthGuard)
-  // @Get('users')
-  // getUserg() {
-  //   return this.authService.findAll();
-  // }
+  @UseGuards(JwtAuthGuard)
+  @Get('users')
+  getUsers() {
+    return this.authService.findAll();
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('user')
+  @ApiQuery({
+    name: 'q',
+    description:
+      'Search user by email (/auth/user?q=jeru)',
+    example: 'jeru',
+  })
+  async getUser(@Query() params: { q: string }) {
+    return this.authService.findByEmail(params.q);
+  }
 }
