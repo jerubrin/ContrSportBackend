@@ -1,94 +1,126 @@
-// import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-// import { InjectRepository } from '@nestjs/typeorm';
-// import { User } from './user.entity';
-// import { Repository } from 'typeorm';
-// import { hash, compare } from 'bcrypt';
-// import { JwtService } from '@nestjs/jwt';
+import { Injectable } from "@nestjs/common";
+import { Event } from "./entities/event.entity";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { JwtService } from "@nestjs/jwt";
+import { Teammate } from "./entities/teammate.entity";
+import { CreateEventRequest } from "./model/create-event.req.model";
+import { ExpenditureItem } from "./entities/expenditure-item.entity";
+import { EventResponce } from "./model/event.res.model";
+import { User } from "src/auth/user.entity";
+import { TeammateRes } from "./model/teammate.res";
 
-// @Injectable()
-// export class AuthService {
-//   constructor(
-//     @InjectRepository(User)
-//     private usersRepository: Repository<User>,
-//     private jwtService: JwtService,
-//   ) {}
+@Injectable()
+export class EventService {
+  constructor(
+    @InjectRepository(Event)
+    private eventRepository: Repository<Event>,
+    @InjectRepository(ExpenditureItem)
+    private expenditureRepository: Repository<ExpenditureItem>,
+    @InjectRepository(Teammate)
+    private teammateRepository: Repository<Teammate>,
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
+  ) {}
 
-//   async getUser(req) {
-//     const user = await this.getUserByEmail(req.user.email);
+  async allEvents(email: string) {
+    const itemsInTeam = await this.teammateRepository.findBy({ email });
+    const events = await Promise.all(
+      itemsInTeam.map((teammate) => this.eventRepository.findOneBy({ id: teammate.eventID }))
+    )
+    console.log(events);
+    const eventRes = await Promise.all(
+      events.map((event) => this.collectEvent(event))
+    );
+    return eventRes;
+  }
 
-//     if (!user) {
-//       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
-//     }
+  oneEvent(id: number) {
+    return this.eventRepository.findOneBy({ id });
+  }
 
-//     const userRes = new UserRes();
-//     userRes.email = user.email;
-//     userRes.firstName = user.firstName;
-//     userRes.lastName = user.lastName;
-//     userRes.dateOfBirth = user.dateOfBirth;
-//     userRes.gender = user.gender;
-//     userRes.countryCode = user.countryCode;
-//     userRes.phone = user.phone;
-//     userRes.citizenship = user.citizenship;
+  async createNewEvent(userEmail: string, eventReq: CreateEventRequest) {
+    const { address, date, expenditure, place, team } = eventReq;
+    const event = {
+      address,
+      date,
+      place,
+    };
+    const newTeam = [ userEmail, ...team ];
+    const newEvent = await this.eventRepository.save(event);
+    console.log(newEvent);
+    const teamArr: Omit<Teammate, "id">[] = await Promise.all(
+      newTeam.map((email) => ({
+        eventID: newEvent.id,
+        email,
+        confirmed: false,
+        paid: 0,
+      }))
+    );
+    this.teammateRepository.save(teamArr);
+    const newExpenditure = expenditure.map((ex) => ({ ...ex, eventID: newEvent.id }))
+    await this.expenditureRepository.save(newExpenditure);
+    return await this.collectEvent(newEvent);
+  }
 
-//     return userRes;
-//   }
+  async deleteEvent(id: number) {
+    const team = await this.teammateRepository.findBy({ eventID: id });
+    team.forEach((item) => this.teammateRepository.delete({ id: item.id }))
+    const expenditure = await this.expenditureRepository.findBy({ eventID: id });
+    expenditure.forEach((item) => this.teammateRepository.delete({ id: item.id }))
+    return await this.eventRepository.delete({ id });
+  }
 
-//   async createUser(req: RegistrationRequest) {
-//     const user = await this.getUserByEmail(req.email);
+  async confirm(email: string, id: number) {
+    const teammate = await this.teammateRepository.findOneBy({ email, eventID: id });
+    teammate.confirmed = true;
+    await this.teammateRepository.save(teammate);
+    return this.collectEvent(await this.eventRepository.findOneBy({ id }));
+  }
 
-//     if (user) {
-//       throw new HttpException('User is alrady exists', HttpStatus.BAD_REQUEST);
-//     }
+  async payment(email: string, id: number, price: number) {
+    const teammate = await this.teammateRepository.findOneBy({ email, eventID: id });
+    teammate.paid += price;
+    await this.teammateRepository.save(teammate);
+    return this.collectEvent(await this.eventRepository.findOneBy({ id }));
+  }
 
-//     const password = await hash(req.password, 7);
-//     const newUser = await this.usersRepository.save({ ...req, password });
-//     return this.generateToken(newUser);
-//   }
+  private async collectEvent(event: Event) {
+    const expenditure = await this.expenditureRepository.findBy({ eventID: event.id });
+    const teammates: Teammate[] = await this.teammateRepository.findBy({ eventID: event.id })
+    const price = expenditure.reduce((sum, item) => sum + item.price, 0);
+    const priceForPersone = price / teammates.length;
 
-//   async loginUser(req: LoginRequest): Promise<TokenRes> {
-//     const user = await this.validateUser(req);
-//     return this.generateToken(user);
-//   }
-
-//   private async validateUser(req: LoginRequest) {
-//     const user = await this.getUserByEmail(req.email);
-
-//     if (!user) {
-//       throw new HttpException('User nof found!', HttpStatus.NOT_FOUND);
-//     }
-
-//     const isPasswordEquals = await compare(req.password, user.password);
-
-//     if (!isPasswordEquals) {
-//       throw new HttpException('Wrong password!', HttpStatus.FORBIDDEN);
-//     }
-
-//     return user;
-//   }
-
-//   private generateToken(user: User): TokenRes {
-//     const { id, email, firstName, lastName, gender } = user;
-//     const payload = { id, email, firstName, lastName, gender };
-//     return {
-//       token: this.jwtService.sign(payload),
-//     };
-//   }
-
-//   async getUserByEmail(email: string) {
-//     return await this.usersRepository.findOne({
-//       where: { email },
-//     });
-//   }
-
-//   findAll(): Promise<User[]> {
-//     return this.usersRepository.find();
-//   }
-
-//   findOne(id: number): Promise<User | null> {
-//     return this.usersRepository.findOneBy({ id });
-//   }
-
-//   async remove(id: number): Promise<void> {
-//     await this.usersRepository.delete(id);
-//   }
-// }
+    const team = await Promise.all(
+      teammates.map(async (teammate) => {
+        const user = await this.usersRepository.findOneBy({ email: teammate.email });
+        const res: TeammateRes = {
+          email: teammate.email,
+          confirmed: teammate.confirmed,
+          paid: teammate.paid,
+          eventID: event.id,
+          firstName: user.firstName,
+          gender: user.gender,
+          lastName: teammate.confirmed ? user.lastName : null,
+          countryCode: teammate.confirmed ? user.countryCode : null,
+          phone: teammate.confirmed ? user.phone : null,
+          telegram: teammate.confirmed ? user.telegram : null,
+        };
+        return res;
+      })
+    )
+  
+    const eventRes: EventResponce = {
+      id: event.id,
+      address: event.address,
+      date: event.date,
+      place: event.place,
+      price,
+      priceForPersone,
+      expenditure,
+      team,
+    };
+  
+    return eventRes;
+  }
+}

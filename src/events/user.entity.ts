@@ -45,15 +45,6 @@ export class User {
   lastName: string;
 
   @ApiProperty({
-    example: '1988-02-24T00:00:00',
-    description: 'Date of birthday in string format',
-  })
-  @Column({
-    nullable: false,
-  })
-  dateOfBirth: string;
-
-  @ApiProperty({
     example: 'Male',
     description: 'Gender in string format (Male of Female)',
   })
@@ -81,11 +72,11 @@ export class User {
   phone: string;
 
   @ApiProperty({
-    example: 'Kazakhstan',
-    description: 'User citizenship',
+    example: 'jerubrin',
+    description: 'User telegram',
   })
   @Column({
     nullable: false,
   })
-  citizenship: string;
+  telegram: string;
 }

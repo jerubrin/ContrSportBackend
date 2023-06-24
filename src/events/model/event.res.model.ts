@@ -1,6 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { ExpenditureItem } from '../entities/expenditure-item.entity';
+import { TeammateRes } from './teammate.res';
 
-export class CreateEventResponce {
+export class EventResponce {
   @ApiProperty({ example: '', description: '' })
   readonly id: number; // ID события
 
@@ -23,5 +25,5 @@ export class CreateEventResponce {
   readonly priceForPersone: number; // цена за 1 человека
 
   @ApiProperty({ description: '' })
-  readonly team: Teammate[]; // Комманда
+  readonly team: TeammateRes[]; // Комманда
 }
