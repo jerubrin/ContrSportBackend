@@ -28,11 +28,10 @@ export class AuthService {
     userRes.email = user.email;
     userRes.firstName = user.firstName;
     userRes.lastName = user.lastName;
-    userRes.dateOfBirth = user.dateOfBirth;
     userRes.gender = user.gender;
     userRes.countryCode = user.countryCode;
     userRes.phone = user.phone;
-    userRes.citizenship = user.citizenship;
+    userRes.telegram = user.telegram;
 
     return userRes;
   }

@@ -20,12 +20,6 @@ export class UserRes {
   lastName: string;
 
   @ApiProperty({
-    example: '1988-02-24T00:00:00',
-    description: 'Date of birthday in string format',
-  })
-  dateOfBirth: string;
-
-  @ApiProperty({
     example: 'Male',
     description: 'Gender in string format (Male of Female)',
   })
@@ -47,5 +41,5 @@ export class UserRes {
     example: 'Kazakhstan',
     description: 'User citizenship',
   })
-  citizenship: string;
+  telegram: string;
 }
