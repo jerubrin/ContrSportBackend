@@ -91,6 +91,20 @@ export class AuthService {
     return this.usersRepository.findOneBy({ id });
   }
 
+  async findByEmail(q: string): Promise<User[]> {
+    const searchStr = q.toLocaleLowerCase();
+    return (await this.usersRepository.find())
+      .filter((user) => 
+        user.email.toLocaleLowerCase().includes(searchStr) ||
+        user.lastName.toLocaleLowerCase().includes(searchStr) ||
+        user.firstName.toLocaleLowerCase().includes(searchStr) ||
+        user.telegram.toLocaleLowerCase().includes(searchStr) ||
+        user.phone.toLocaleLowerCase().includes(searchStr) ||
+        (`${user.lastName} ${user.firstName}`).toLocaleLowerCase().includes(searchStr) ||
+        (`${user.firstName} ${user.lastName}`).toLocaleLowerCase().includes(searchStr)
+      );
+  }
+
   async remove(id: number): Promise<void> {
     await this.usersRepository.delete(id);
   }
