@@ -2,12 +2,13 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtAuthGuard } from 'src/guard/jwt-auth.guard';
-import { User } from './user.entity';
 import { Event } from './entities/event.entity';
 import { ExpenditureItem } from './entities/expenditure-item.entity';
 import { Teammate } from './entities/teammate.entity';
 import { EventController } from './event.controller';
 import { EventService } from './event.service';
+import { User } from './user.entity';
+import { MailService } from './mail.service';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { EventService } from './event.service';
     }),
   ],
   controllers: [EventController],
-  providers: [EventService, JwtAuthGuard],
+  providers: [EventService, MailService, JwtAuthGuard],
   exports: [TypeOrmModule, JwtModule],
 })
 export class EventModule {}

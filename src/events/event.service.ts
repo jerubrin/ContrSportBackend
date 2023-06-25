@@ -5,6 +5,7 @@ import { Repository } from "typeorm";
 import { Event } from "./entities/event.entity";
 import { ExpenditureItem } from "./entities/expenditure-item.entity";
 import { Teammate } from "./entities/teammate.entity";
+import { MailService } from './mail.service';
 import { CreateEventRequest } from "./model/create-event.req.model";
 import { EventResponce } from "./model/event.res.model";
 import { TeammateRes } from "./model/teammate.res";
@@ -20,6 +21,7 @@ export class EventService {
     private teammateRepository: Repository<Teammate>,
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    private mailService: MailService,
   ) {}
 
   async allEvents(email: string) {
@@ -56,11 +58,23 @@ export class EventService {
         email,
         confirmed: false,
         paid: 0,
-      }))
+      })),
     );
     this.teammateRepository.save(teamArr);
     const newExpenditure = expenditure.map((ex) => ({ ...ex, eventID: newEvent.id }))
     await this.expenditureRepository.save(newExpenditure);
+    const mainUser = await this.usersRepository.findOneBy({ email: userEmail });
+    teamArr.forEach((user, i) => {
+      if (i === 0) {
+        return;
+      }
+
+      this.mailService.sendNotifyAddedToEvent(
+        user.email,
+        `${mainUser.firstName} ${mainUser.lastName}`,
+        newEvent,
+      ).catch((err) => console.log(err));
+    });
     return await this.collectEvent(newEvent);
   }
 
@@ -69,6 +83,19 @@ export class EventService {
     team.forEach((item) => this.teammateRepository.delete({ id: item.id }))
     const expenditure = await this.expenditureRepository.findBy({ eventID: id });
     expenditure.forEach((item) => this.teammateRepository.delete({ id: item.id }))
+    const mainUserTeammate = (await this.teammateRepository.findOneBy({ eventID: id }));
+    const mainUser = (await this.usersRepository.findOneBy({ email: mainUserTeammate.email }));
+    team.forEach(async (user, i) => {
+      if (i === 0) {
+        return;
+      }
+
+      this.mailService.sendNotifyRemoveEvent(
+        user.email,
+        `${mainUser.firstName} ${mainUser.lastName}`,
+        await this.eventRepository.findOneBy({ id }),
+      ).catch((err) => console.log(err));
+    });
     return await this.eventRepository.delete({ id });
   }
 
@@ -76,6 +103,19 @@ export class EventService {
     const teammate = await this.teammateRepository.findOneBy({ email, eventID: id });
     teammate.confirmed = true;
     await this.teammateRepository.save(teammate);
+    const mainUser = await this.usersRepository.findOneBy({ email });
+    (await this.teammateRepository.findBy({ eventID: id })).forEach(async (user, i) => {
+      if (user.email === email) {
+        return;
+      }
+
+      this.mailService.sendNotifyConfirmd(
+        user.email,
+        `${mainUser.firstName} ${mainUser.lastName}`,
+        await this.eventRepository.findOneBy({ id }),
+      ).catch((err) => console.log(err));
+    });
+
     return this.collectEvent(await this.eventRepository.findOneBy({ id }));
   }
 
@@ -83,6 +123,18 @@ export class EventService {
     const teammate = await this.teammateRepository.findOneBy({ email, eventID: id });
     teammate.paid += price;
     await this.teammateRepository.save(teammate);
+    const mainUser = await this.usersRepository.findOneBy({ email });
+    (await this.teammateRepository.findBy({ eventID: id })).forEach(async (user, i) => {
+      if (user.email === email) {
+        return;
+      }
+
+      this.mailService.sendNotifyPayed(
+        user.email,
+        `${mainUser.firstName} ${mainUser.lastName}`,
+        await this.eventRepository.findOneBy({ id }),
+      ).catch((err) => console.log(err));
+    });
     return this.collectEvent(await this.eventRepository.findOneBy({ id }));
   }
 
