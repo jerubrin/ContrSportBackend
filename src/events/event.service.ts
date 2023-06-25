@@ -1,13 +1,12 @@
 import { Injectable } from "@nestjs/common";
-import { Event } from "./entities/event.entity";
 import { InjectRepository } from "@nestjs/typeorm";
+import { User } from "src/auth/user.entity";
 import { Repository } from "typeorm";
-import { JwtService } from "@nestjs/jwt";
+import { Event } from "./entities/event.entity";
+import { ExpenditureItem } from "./entities/expenditure-item.entity";
 import { Teammate } from "./entities/teammate.entity";
 import { CreateEventRequest } from "./model/create-event.req.model";
-import { ExpenditureItem } from "./entities/expenditure-item.entity";
 import { EventResponce } from "./model/event.res.model";
-import { User } from "src/auth/user.entity";
 import { TeammateRes } from "./model/teammate.res";
 
 @Injectable()
@@ -35,8 +34,10 @@ export class EventService {
     return eventRes;
   }
 
-  oneEvent(id: number) {
-    return this.eventRepository.findOneBy({ id });
+  async oneEvent(id: number) {
+    return await this.collectEvent(
+      await this.eventRepository.findOneBy({ id }),
+    );
   }
 
   async createNewEvent(userEmail: string, eventReq: CreateEventRequest) {
@@ -46,7 +47,7 @@ export class EventService {
       date,
       place,
     };
-    const newTeam = [ userEmail, ...team ];
+    const newTeam = [userEmail, ...team];
     const newEvent = await this.eventRepository.save(event);
     console.log(newEvent);
     const teamArr: Omit<Teammate, "id">[] = await Promise.all(

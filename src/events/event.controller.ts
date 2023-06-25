@@ -33,8 +33,7 @@ export class EventController {
   @Get('item')
   @ApiQuery({
     name: 'id',
-    description:
-      'Get one event by id (/events/item?id=1)',
+    description: 'Get one event by id (/events/item?id=1)',
     example: 1,
   })
   getEvent(@Query() { id }: { id: number }) {
@@ -56,8 +55,7 @@ export class EventController {
   @Delete('delete')
   @ApiQuery({
     name: 'id',
-    description:
-      'Delete one event by id (/events/delete?id=1)',
+    description: 'Delete one event by id (/events/delete?id=1)',
     example: 1,
   })
   deleteEvent(@Query() { id }: { id: number }) {
@@ -94,7 +92,10 @@ export class EventController {
       'Pay for the event by event-id (/events/confirm?id=1&price=100)',
     example: 100,
   })
-  confirmEventPayment(@Request() req, @Query() { id, price }: { id: number, price?: number }) {
+  confirmEventPayment(
+    @Request() req,
+    @Query() { id, price }: { id: number; price?: number },
+  ) {
     return this.eventService.payment(req.user.email, id, price ?? 0);
   }
 }
